@@ -1,0 +1,114 @@
+const TestUtil = require('../../utils/TestUtils')
+const OverviewPage = require('../../pages/OverviewPage')
+const HomePage = require('../../pages/HomePage')
+const PasswordPage = require('../../pages/PasswordPage')
+const SwapPage = require('../../pages/SwapPage')
+const expect = require('chai').expect
+
+const puppeteer = require('puppeteer')
+
+const testUtil = new TestUtil()
+const overviewPage = new OverviewPage()
+const homePage = new HomePage()
+const passwordPage = new PasswordPage()
+const swapPage = new SwapPage()
+
+let browser, page
+
+const swapPairMap = [
+  {
+    from: 'MATIC',
+    to: 'PUSDT'
+  },
+  {
+    from: 'MATIC',
+    to: 'PWETH'
+  },
+  {
+    from: 'PWETH',
+    to: 'MATIC'
+  }
+  // {
+  //   from: 'PWETH',
+  //   to: 'PUSDT'
+  // }
+]
+
+describe('1Inch Service Provider-["MAINNET","PULL_REQUEST_TEST"]', async () => {
+  swapPairMap.forEach((obj) => {
+    it(`SWAP (${obj.from}->${obj.to})-PULL_REQUEST_TEST `, async () => {
+      const fromAsset = obj.from
+      const toAsset = obj.to
+
+      browser = await puppeteer.launch(testUtil.getChromeOptions())
+      page = await browser.newPage()
+      await page.goto(testUtil.extensionRootUrl, { waitUntil: 'load', timeout: 0 })
+      // Import wallet option
+      await homePage.ClickOnImportWallet(page)
+      await homePage.ScrollToEndOfTerms(page)
+      await homePage.ClickOnAcceptPrivacy(page)
+      // Enter seed words and submit
+      await homePage.EnterSeedWords(page)
+      // Create a password & submit
+      await passwordPage.SubmitPasswordDetails(page)
+      // overview page
+      await overviewPage.CloseWhatsNewModal(page)
+      await overviewPage.HasOverviewPageLoaded(page)
+
+      await overviewPage.SelectAssetFromOverview(page, fromAsset)
+      await page.waitForSelector(`#${fromAsset}_swap_button`, { visible: true })
+      await page.click(`#${fromAsset}_swap_button`)
+
+      await swapPage.SelectSwapReceiveCoin(page)
+      await page.waitForSelector('#search_for_a_currency', { visible: true })
+      await page.type('#search_for_a_currency', toAsset)
+      await page.click(`#${toAsset}`)
+      // 1inch
+      await page.waitForTimeout(10000)
+      await page.waitForSelector('#selectedQuote_provider', { visible: true })
+      console.log('Provider quote selected')
+
+      const provider = await page.$eval('#selectedQuote_provider', (el) => el.innerText)
+      if (provider === 'Oneinch V4') {
+        expect(provider, `${obj.from}->${obj.to} swap, Oneinch V4 should be chosen!`).to.equal(
+          'Oneinch V4'
+        )
+      } else {
+        await page.waitForSelector('#see_all_quotes', { visible: true })
+        await page.click('#see_all_quotes')
+        await page.waitForSelector('#oneinchV4_rate_provider', { visible: true })
+        await page.click('#oneinchV4_rate_provider')
+      }
+      // Validate available balance
+      const { availableBalance } = await swapPage.getSwapAvailableBalance(page)
+      expect(
+        availableBalance,
+        `${obj.from}->${obj.to} swap, available balance should be greater than 0`
+      ).to.be.above(0)
+
+      // validate Send & To fiat values
+      const { sendFromFiat, toFiat } = await swapPage.getSwapFiatValues(page)
+
+      expect(
+        sendFromFiat,
+        `${obj.from}->${obj.to}) swap, Send fiat amount should be correct!`
+      ).not.equals('$0.00')
+      expect(
+        sendFromFiat,
+        `${obj.from}->${obj.to}) swap, To fiat amount should be correct!`
+      ).not.equals('NaN')
+      // validate Receive fiat amount
+      expect(
+        toFiat,
+        `${obj.from}->${obj.to}) swap, Receive fiat amount should be correct!`
+      ).not.equals('$0.00')
+      expect(
+        toFiat,
+        `${obj.from}->${obj.to}) swap, Receive fiat amount should be correct!`
+      ).not.equals('NaN')
+    })
+  })
+  afterEach(async () => {
+    await browser.close()
+  })
+})

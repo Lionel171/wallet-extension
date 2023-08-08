@@ -1,0 +1,132 @@
+<template>
+  <Modal @close="$emit('close')" :close-outside="true">
+    <template #header>
+      <h5 id="learn_about_swaps_types_header">
+        {{ $t('pages.swap.learnMoreAboutSwapProviders') }}
+      </h5>
+    </template>
+    <template>
+      <div class="swap-providers-info">
+        <p>
+          {{ $t('pages.swap.swapProvidersInfo') }}
+        </p>
+        <div class="swap-providers-info_links mb-4 border-bottom">
+          <ul>
+            <li v-for="provider in uniqueProvides" :key="provider.id" class="py-1 px-2">
+              <span class="d-flex align-items-center"
+                ><img :src="getProviderIcon(provider.id)" class="mr-2" />{{ provider.name }}</span
+              >
+            </li>
+          </ul>
+        </div>
+        <div
+          v-for="provider in providers"
+          :key="provider.id"
+          class="swap-providers-info_list border-bottom mb-4"
+        >
+          <SwapProviderLabel :network="activeNetwork" :provider="provider.id" class="mb-2" />
+          <h6>{{ provider.title }}</h6>
+          <p>{{ provider.description }}</p>
+          <div class="row">
+            <div class="col">
+              <h6>{{ $t('pages.swap.pros') }}</h6>
+              <ul>
+                <li v-for="pro in provider.pros" :key="pro">{{ pro }}</li>
+              </ul>
+            </div>
+            <div class="col">
+              <h6>{{ $t('pages.swap.cons') }}</h6>
+              <ul>
+                <li v-for="con in provider.cons" :key="con">{{ con }}</li>
+              </ul>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <h6>{{ $t('pages.swap.feeStructure') }}</h6>
+              <ul>
+                <li v-for="fee in provider.fees" :key="fee">{{ fee }}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+  </Modal>
+</template>
+
+<script>
+import { mapState } from 'vuex'
+import Modal from '@/components/Modal'
+import SwapProviderLabel from '@/components/SwapProviderLabel.vue'
+import {
+  getSwapProviderConfig,
+  getSwapProviderInfo
+} from '@liquality/wallet-core/dist/src/swaps/utils'
+import { getSwapProviderIcon } from '@/utils/swaps'
+import { buildConfig } from '@liquality/wallet-core'
+
+export default {
+  components: {
+    Modal,
+    SwapProviderLabel
+  },
+  computed: {
+    ...mapState(['activeNetwork']),
+    providers() {
+      return Object.entries(buildConfig.swapProviders[this.activeNetwork]).map(
+        ([provider, providerConfig]) => {
+          return {
+            id: provider,
+            name: providerConfig.name,
+            ...getSwapProviderInfo(this.activeNetwork, provider)
+          }
+        }
+      )
+    },
+    uniqueProvides() {
+      return [...new Map(this.providers.map((item) => [item['name'], item])).values()]
+    }
+  },
+  methods: {
+    getProviderName(provider) {
+      const config = getSwapProviderConfig(this.activeNetwork, provider)
+      return config.name
+    },
+    getProviderIcon(provider) {
+      return getSwapProviderIcon(this.activeNetwork, provider)
+    },
+    getProviderInfo(provider) {
+      return getSwapProviderInfo(this.activeNetwork, provider)
+    }
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.swap-providers-info {
+  &_links {
+    ul {
+      list-style-type: none;
+      padding: 0;
+
+      li {
+        display: inline-block;
+      }
+    }
+
+    img {
+      height: 24px;
+      width: auto;
+      max-width: 20px;
+    }
+  }
+
+  &_list {
+    ul {
+      list-style-position: inside;
+      padding: 0;
+    }
+  }
+}
+</style>

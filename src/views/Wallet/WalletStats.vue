@@ -1,0 +1,218 @@
+<template>
+  <div class="wallet-stats">
+    <div>
+      <div class="buy-crypto-banner" v-show="showByCryptoBanner">
+        <div class="triangle" @click="openByCryptoModal">
+          <div class="buy-crypto-content">
+            <div class="buy-crypto-text" id="buy-crypto-from-overview-screen">
+              Buy Crypto
+              <ChevronWhiteRightIcon class="chevron-right" />
+            </div>
+            <CartIcon class="cart-icon" />
+          </div>
+        </div>
+      </div>
+      <div>
+        <span
+          class="wallet-stats_total"
+          id="overview-wallet-fiat-total"
+          :style="{ fontSize: formatFontSize(total) }"
+        >
+          {{ total }}
+        </span>
+        <span>USD</span>
+      </div>
+      <span id="total_assets">
+        {{ assetsCount }} {{ $t('common.asset', { count: assetsCount }) }}
+      </span>
+      <div class="wallet-actions">
+        <router-link to="/assets/send" class="wallet-actions-item send-action" id="send_action">
+          <SendIcon />
+          {{ $t('common.send') }}
+        </router-link>
+        <router-link
+          to="/assets/swap.send"
+          class="wallet-actions-item swap-action"
+          id="swap_action"
+        >
+          <SwapIcon />
+          {{ $t('common.swap') }}
+        </router-link>
+        <router-link
+          to="/assets/receive"
+          class="wallet-actions-item receive-action"
+          id="receive_action"
+        >
+          <ReceiveIcon />
+          {{ $t('common.receive') }}
+        </router-link>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { mapActions, mapGetters, mapState } from 'vuex'
+import SendIcon from '@/assets/icons/send_o.svg'
+import ReceiveIcon from '@/assets/icons/receive_o.svg'
+import SwapIcon from '@/assets/icons/swap_o.svg'
+import { formatFiat } from '@liquality/wallet-core/dist/src/utils/coinFormatter'
+import { formatFontSize } from '@/utils/fontSize'
+import CartIcon from '@/assets/icons/cart.svg'
+import ChevronWhiteRightIcon from '@/assets/icons/chevron_white_right.svg'
+
+export default {
+  components: {
+    SendIcon,
+    ReceiveIcon,
+    SwapIcon,
+    CartIcon,
+    ChevronWhiteRightIcon
+  },
+  computed: {
+    ...mapGetters(['totalFiatBalance', 'accountsData']),
+    ...mapState(['activeNetwork']),
+    total() {
+      return formatFiat(this.totalFiatBalance)
+    },
+    showByCryptoBanner() {
+      return this.activeNetwork === 'mainnet' && this.totalFiatBalance?.lte(0)
+    },
+    assetsCount() {
+      const balances = this.accountsData.map((a) => a.balances)
+
+      return balances
+        .map((bal) => Object.values(bal).map((b) => parseInt(b, 10) > 0))
+        .flat(1)
+        .filter((i) => !!i).length
+    }
+  },
+  methods: {
+    ...mapActions('app', ['setBuyCryptoOverviewModalOpen']),
+    formatFontSize(value) {
+      return formatFontSize(value)
+    },
+    openByCryptoModal() {
+      this.setBuyCryptoOverviewModalOpen({ open: true })
+    }
+  }
+}
+</script>
+
+<style lang="scss">
+.wallet-stats {
+  position: relative;
+  display: flex;
+  height: 225px;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  background: $brand-gradient-primary;
+  color: $color-text-secondary;
+  font-size: $font-size-lg;
+  z-index: 100;
+
+  .buy-crypto-banner {
+    position: absolute;
+    top: -65px;
+    left: -15px;
+    z-index: 101;
+    color: #ffffff;
+    text-transform: uppercase;
+
+    .triangle {
+      width: 0;
+      height: 0;
+      border-top: 100px solid transparent;
+      border-bottom: 100px solid transparent;
+      border-right: 100px solid #d421eb;
+      transform: rotate(45deg);
+      cursor: pointer;
+      &:hover {
+        border-right: 100px solid #c606de;
+      }
+    }
+
+    .buy-crypto-content {
+      transform: rotate(-45deg);
+      display: flex;
+      position: absolute;
+      z-index: 102;
+      top: -30px;
+      left: 30px;
+      flex-direction: column;
+      font-style: normal;
+      align-items: flex-start;
+      font-size: 10px;
+      letter-spacing: -0.08px;
+      cursor: pointer;
+
+      .buy-crypto-text {
+        display: flex;
+        width: 75px;
+        .chevron-right {
+          width: 5px;
+          margin-left: 3px;
+          vertical-align: middle;
+        }
+      }
+
+      .cart-icon {
+        width: 43px;
+        margin-top: 2px;
+      }
+    }
+  }
+
+  &_total {
+    font-size: 50px;
+    line-height: 61px;
+  }
+
+  .wallet-actions {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    padding-top: 10px;
+
+    .wallet-actions-item {
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 57px;
+
+      svg {
+        margin-bottom: 5px;
+      }
+
+      &.send-action {
+        svg {
+          width: 44px;
+          height: 44px;
+        }
+        margin-right: 14px;
+      }
+
+      &.swap-action {
+        svg {
+          width: 57px;
+          height: 57px;
+        }
+      }
+
+      &.receive-action {
+        margin-left: 14px;
+        svg {
+          width: 44px;
+          height: 44px;
+        }
+      }
+    }
+  }
+}
+</style>
